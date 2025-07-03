@@ -1,9 +1,6 @@
-import React, { useEffect, useState } from 'react'
+import React, { useState } from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { Toaster } from 'react-hot-toast'
-import { useAuthStore } from './stores/authStore'
-import { useScrapingStore } from './stores/scrapingStore'
-import { AuthForm } from './components/auth/AuthForm'
 import { Header } from './components/layout/Header'
 import { Sidebar } from './components/layout/Sidebar'
 import { Dashboard } from './components/dashboard/Dashboard'
@@ -11,39 +8,7 @@ import { Dashboard } from './components/dashboard/Dashboard'
 const queryClient = new QueryClient()
 
 function App() {
-  const { user, loading, initialized, initialize } = useAuthStore()
-  const { fetchProjects } = useScrapingStore()
   const [activeTab, setActiveTab] = useState('dashboard')
-
-  useEffect(() => {
-    initialize()
-  }, [initialize])
-
-  useEffect(() => {
-    if (user) {
-      fetchProjects()
-    }
-  }, [user, fetchProjects])
-
-  if (!initialized) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading...</p>
-        </div>
-      </div>
-    )
-  }
-
-  if (!user) {
-    return (
-      <QueryClientProvider client={queryClient}>
-        <AuthForm />
-        <Toaster position="top-right" />
-      </QueryClientProvider>
-    )
-  }
 
   const renderContent = () => {
     switch (activeTab) {

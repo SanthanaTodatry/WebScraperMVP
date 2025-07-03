@@ -17,8 +17,8 @@ export const QuickStart: React.FC = () => {
   const { createJob, projects } = useScrapingStore()
   const { register, handleSubmit, formState: { errors }, reset } = useForm<QuickStartFormData>()
 
-  // Create a default project if none exists
-  const defaultProject = projects[0] || { id: 'temp', name: 'Quick Start' }
+  // Use the first project or create a default one
+  const defaultProject = projects[0] || { id: '1', name: 'Demo Project' }
 
   const onSubmit = async (data: QuickStartFormData) => {
     try {
@@ -30,9 +30,13 @@ export const QuickStart: React.FC = () => {
         throw new Error('Please enter a valid URL')
       }
 
-      // TODO: Add Firecrawl validation here
+      // Add protocol if missing
+      let url = data.url
+      if (!url.startsWith('http://') && !url.startsWith('https://')) {
+        url = 'https://' + url
+      }
       
-      await createJob(defaultProject.id, data.url, data.aiPrompt)
+      await createJob(defaultProject.id, url, data.aiPrompt)
       toast.success('Scraping job created successfully!')
       reset()
     } catch (error) {
