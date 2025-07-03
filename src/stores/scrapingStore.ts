@@ -1,5 +1,7 @@
 import { create } from 'zustand'
 import { ScrapingJob, ScrapingResult, ScrapingProject } from '../types'
+import { supabase } from '../lib/supabase'
+import { useAuthStore } from './authStore'
 
 interface ScrapingState {
   projects: ScrapingProject[]
@@ -15,55 +17,12 @@ interface ScrapingState {
   fetchJobs: (projectId?: string) => Promise<void>
   fetchResults: (jobId?: string) => Promise<void>
   updateJobStatus: (jobId: string, status: string, errorMessage?: string) => Promise<void>
+  saveScrapingResult: (jobId: string, rawContent: any, extractedData: any, aiAnalysis: any, metadata: any) => Promise<void>
 }
 
-// Mock data for demonstration
-const mockProjects: ScrapingProject[] = [
-  {
-    id: '1',
-    user_id: 'demo-user',
-    name: 'Demo Project',
-    description: 'A sample project for testing',
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  }
-]
-
-const mockJobs: ScrapingJob[] = [
-  {
-    id: '1',
-    project_id: '1',
-    user_id: 'demo-user',
-    url: 'https://example.com',
-    status: 'completed',
-    ai_analysis_prompt: 'Extract main content and summarize',
-    created_at: new Date(Date.now() - 3600000).toISOString(), // 1 hour ago
-    completed_at: new Date(Date.now() - 3000000).toISOString(), // 50 minutes ago
-  },
-  {
-    id: '2',
-    project_id: '1',
-    user_id: 'demo-user',
-    url: 'https://news.ycombinator.com',
-    status: 'processing',
-    ai_analysis_prompt: 'Extract top stories and their scores',
-    created_at: new Date(Date.now() - 1800000).toISOString(), // 30 minutes ago
-  },
-  {
-    id: '3',
-    project_id: '1',
-    user_id: 'demo-user',
-    url: 'https://github.com',
-    status: 'failed',
-    ai_analysis_prompt: 'Extract trending repositories',
-    created_at: new Date(Date.now() - 900000).toISOString(), // 15 minutes ago
-    error_message: 'Rate limit exceeded',
-  }
-]
-
 export const useScrapingStore = create<ScrapingState>((set, get) => ({
-  projects: mockProjects,
-  jobs: mockJobs,
+  projects: [],
+  jobs: [],
   results: [],
   loading: false,
   error: null,
@@ -71,36 +30,51 @@ export const useScrapingStore = create<ScrapingState>((set, get) => ({
   createProject: async (name: string, description?: string) => {
     set({ loading: true, error: null })
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      
-      const newProject: ScrapingProject = {
-        id: Date.now().toString(),
-        user_id: 'demo-user',
-        name,
-        description,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) {
+        throw new Error('User not authenticated')
       }
 
+      const { data, error } = await supabase
+        .from('scraping_projects')
+        .insert({
+          user_id: user.id,
+          name,
+          description,
+        })
+        .select()
+        .single()
+
+      if (error) throw error
+
       set((state) => ({
-        projects: [...state.projects, newProject],
+        projects: [...state.projects, data],
         loading: false,
       }))
     } catch (error) {
       console.error('Create project error:', error)
       set({ error: error instanceof Error ? error.message : 'Unknown error', loading: false })
+      throw error
     }
   },
 
   fetchProjects: async () => {
     set({ loading: true, error: null })
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 500))
-      
-      // Projects are already loaded with mock data
-      set({ loading: false })
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) {
+        throw new Error('User not authenticated')
+      }
+
+      const { data, error } = await supabase
+        .from('scraping_projects')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+
+      if (error) throw error
+
+      set({ projects: data || [], loading: false })
     } catch (error) {
       console.error('Fetch projects error:', error)
       set({ error: error instanceof Error ? error.message : 'Unknown error', loading: false })
@@ -110,51 +84,106 @@ export const useScrapingStore = create<ScrapingState>((set, get) => ({
   createJob: async (projectId: string, url: string, aiPrompt?: string) => {
     set({ loading: true, error: null })
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      
-      const newJob: ScrapingJob = {
-        id: Date.now().toString(),
-        project_id: projectId,
-        user_id: 'demo-user',
-        url,
-        status: 'pending',
-        ai_analysis_prompt: aiPrompt,
-        created_at: new Date().toISOString(),
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) {
+        throw new Error('User not authenticated')
       }
 
+      const { data, error } = await supabase
+        .from('scraping_jobs')
+        .insert({
+          project_id: projectId,
+          user_id: user.id,
+          url,
+          ai_analysis_prompt: aiPrompt,
+          status: 'pending',
+        })
+        .select()
+        .single()
+
+      if (error) throw error
+
       set((state) => ({
-        jobs: [newJob, ...state.jobs],
+        jobs: [data, ...state.jobs],
         loading: false,
       }))
 
       // Simulate job processing
       setTimeout(() => {
-        get().updateJobStatus(newJob.id, 'processing')
+        get().updateJobStatus(data.id, 'processing')
       }, 2000)
       
-      setTimeout(() => {
-        get().updateJobStatus(newJob.id, 'completed')
+      setTimeout(async () => {
+        await get().updateJobStatus(data.id, 'completed')
+        
+        // Simulate saving scraping results
+        const mockRawContent = {
+          html: '<html><body><h1>Sample Content</h1><p>This is mock scraped content from ' + url + '</p></body></html>',
+          text: 'Sample Content\nThis is mock scraped content from ' + url,
+          title: 'Sample Page Title',
+          url: url
+        }
+        
+        const mockExtractedData = {
+          title: 'Sample Page Title',
+          headings: ['Sample Content'],
+          paragraphs: ['This is mock scraped content from ' + url],
+          links: [{ text: 'Example Link', href: 'https://example.com' }],
+          images: []
+        }
+        
+        const mockAiAnalysis = {
+          summary: 'This page contains sample content that demonstrates the scraping functionality.',
+          keyTopics: ['web scraping', 'sample content', 'demonstration'],
+          sentiment: 'neutral',
+          confidence: 0.85,
+          extractedInfo: {
+            mainContent: 'Sample content extracted from the webpage',
+            relevantData: 'Key information identified by AI analysis'
+          }
+        }
+        
+        const mockMetadata = {
+          scrapedAt: new Date().toISOString(),
+          processingTime: 3.2,
+          wordCount: 12,
+          language: 'en',
+          charset: 'utf-8'
+        }
+        
+        await get().saveScrapingResult(data.id, mockRawContent, mockExtractedData, mockAiAnalysis, mockMetadata)
       }, 5000)
       
     } catch (error) {
       console.error('Create job error:', error)
       set({ error: error instanceof Error ? error.message : 'Unknown error', loading: false })
+      throw error
     }
   },
 
   fetchJobs: async (projectId?: string) => {
     set({ loading: true, error: null })
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 500))
-      
-      let jobs = mockJobs
-      if (projectId) {
-        jobs = jobs.filter(job => job.project_id === projectId)
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) {
+        throw new Error('User not authenticated')
       }
-      
-      set({ jobs, loading: false })
+
+      let query = supabase
+        .from('scraping_jobs')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+
+      if (projectId) {
+        query = query.eq('project_id', projectId)
+      }
+
+      const { data, error } = await query
+
+      if (error) throw error
+
+      set({ jobs: data || [], loading: false })
     } catch (error) {
       console.error('Fetch jobs error:', error)
       set({ error: error instanceof Error ? error.message : 'Unknown error', loading: false })
@@ -164,11 +193,20 @@ export const useScrapingStore = create<ScrapingState>((set, get) => ({
   fetchResults: async (jobId?: string) => {
     set({ loading: true, error: null })
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 500))
-      
-      // Mock results would go here
-      set({ results: [], loading: false })
+      let query = supabase
+        .from('scraping_results')
+        .select('*')
+        .order('created_at', { ascending: false })
+
+      if (jobId) {
+        query = query.eq('job_id', jobId)
+      }
+
+      const { data, error } = await query
+
+      if (error) throw error
+
+      set({ results: data || [], loading: false })
     } catch (error) {
       console.error('Fetch results error:', error)
       set({ error: error instanceof Error ? error.message : 'Unknown error', loading: false })
@@ -177,6 +215,22 @@ export const useScrapingStore = create<ScrapingState>((set, get) => ({
 
   updateJobStatus: async (jobId: string, status: string, errorMessage?: string) => {
     try {
+      const updateData: any = { 
+        status,
+        error_message: errorMessage 
+      }
+      
+      if (status === 'completed') {
+        updateData.completed_at = new Date().toISOString()
+      }
+
+      const { error } = await supabase
+        .from('scraping_jobs')
+        .update(updateData)
+        .eq('id', jobId)
+
+      if (error) throw error
+
       // Update local state
       set((state) => ({
         jobs: state.jobs.map((job) =>
@@ -192,6 +246,32 @@ export const useScrapingStore = create<ScrapingState>((set, get) => ({
       }))
     } catch (error) {
       console.error('Update job status error:', error)
+      throw error
+    }
+  },
+
+  saveScrapingResult: async (jobId: string, rawContent: any, extractedData: any, aiAnalysis: any, metadata: any) => {
+    try {
+      const { data, error } = await supabase
+        .from('scraping_results')
+        .insert({
+          job_id: jobId,
+          raw_content: rawContent,
+          extracted_data: extractedData,
+          ai_analysis: aiAnalysis,
+          metadata: metadata,
+        })
+        .select()
+        .single()
+
+      if (error) throw error
+
+      set((state) => ({
+        results: [data, ...state.results],
+      }))
+    } catch (error) {
+      console.error('Save scraping result error:', error)
+      throw error
     }
   },
 }))

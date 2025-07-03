@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { Card, CardContent, CardHeader } from '../ui/Card'
 import { Button } from '../ui/Button'
@@ -14,7 +14,7 @@ interface QuickStartFormData {
 
 export const QuickStart: React.FC = () => {
   const [isValidating, setIsValidating] = useState(false)
-  const { createJob, projects } = useScrapingStore()
+  const { createJob, projects, fetchProjects } = useScrapingStore()
   const { 
     register, 
     handleSubmit, 
@@ -23,11 +23,20 @@ export const QuickStart: React.FC = () => {
     setValue 
   } = useForm<QuickStartFormData>()
 
+  useEffect(() => {
+    fetchProjects()
+  }, [fetchProjects])
+
   // Use the first project or create a default one
-  const defaultProject = projects[0] || { id: '1', name: 'Demo Project' }
+  const defaultProject = projects[0]
 
   const onSubmit = async (data: QuickStartFormData) => {
     console.log('Form submitted with data:', data)
+    
+    if (!defaultProject) {
+      toast.error('No project available. Please create a project first.')
+      return
+    }
     
     try {
       setIsValidating(true)
@@ -129,10 +138,17 @@ export const QuickStart: React.FC = () => {
               type="submit" 
               className="w-full" 
               loading={isValidating}
+              disabled={!defaultProject}
             >
               <Zap className="h-4 w-4 mr-2" />
               Start AI Scraping
             </Button>
+            
+            {!defaultProject && (
+              <p className="text-sm text-warning-600 text-center">
+                Creating default project...
+              </p>
+            )}
           </form>
         </CardContent>
       </Card>

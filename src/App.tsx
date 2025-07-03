@@ -1,14 +1,30 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { Toaster } from 'react-hot-toast'
 import { Header } from './components/layout/Header'
 import { Sidebar } from './components/layout/Sidebar'
 import { Dashboard } from './components/dashboard/Dashboard'
+import { useAuthStore } from './stores/authStore'
+import { useScrapingStore } from './stores/scrapingStore'
 
 const queryClient = new QueryClient()
 
 function App() {
   const [activeTab, setActiveTab] = useState('dashboard')
+  const { initialize, initialized } = useAuthStore()
+  const { createProject, projects } = useScrapingStore()
+
+  useEffect(() => {
+    initialize()
+  }, [initialize])
+
+  useEffect(() => {
+    // Create a default project if none exists
+    if (initialized && projects.length === 0) {
+      createProject('Default Project', 'Your default scraping project')
+        .catch(console.error)
+    }
+  }, [initialized, projects.length, createProject])
 
   const renderContent = () => {
     switch (activeTab) {
@@ -27,6 +43,17 @@ function App() {
       default:
         return <Dashboard />
     }
+  }
+
+  if (!initialized) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Initializing application...</p>
+        </div>
+      </div>
+    )
   }
 
   return (
