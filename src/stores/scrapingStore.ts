@@ -3,6 +3,7 @@ import { ScrapingJob, ScrapingResult, ScrapingProject } from '../types'
 import { supabase } from '../lib/supabase'
 import { getFirecrawlClient } from '../lib/firecrawl'
 import { getOpenAIClient } from '../lib/openai'
+import { useAuthStore } from './authStore'
 
 interface ScrapingState {
   projects: ScrapingProject[]
@@ -32,7 +33,7 @@ export const useScrapingStore = create<ScrapingState>((set, get) => ({
   createProject: async (name: string, description?: string) => {
     set({ loading: true, error: null })
     try {
-      const { data: { user } } = await supabase.auth.getUser()
+      const user = useAuthStore.getState().user
       if (!user) {
         throw new Error('User not authenticated')
       }
@@ -63,7 +64,7 @@ export const useScrapingStore = create<ScrapingState>((set, get) => ({
   fetchProjects: async () => {
     set({ loading: true, error: null })
     try {
-      const { data: { user } } = await supabase.auth.getUser()
+      const user = useAuthStore.getState().user
       if (!user) {
         throw new Error('User not authenticated')
       }
@@ -86,7 +87,7 @@ export const useScrapingStore = create<ScrapingState>((set, get) => ({
   createJob: async (projectId: string, url: string, aiPrompt?: string) => {
     set({ loading: true, error: null })
     try {
-      const { data: { user } } = await supabase.auth.getUser()
+      const user = useAuthStore.getState().user
       if (!user) {
         throw new Error('User not authenticated')
       }
@@ -230,7 +231,7 @@ export const useScrapingStore = create<ScrapingState>((set, get) => ({
   fetchJobs: async (projectId?: string) => {
     set({ loading: true, error: null })
     try {
-      const { data: { user } } = await supabase.auth.getUser()
+      const user = useAuthStore.getState().user
       if (!user) {
         throw new Error('User not authenticated')
       }
