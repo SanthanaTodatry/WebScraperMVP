@@ -33,15 +33,20 @@ export const useScrapingStore = create<ScrapingState>((set, get) => ({
   createProject: async (name: string, description?: string) => {
     set({ loading: true, error: null })
     try {
-      const user = useAuthStore.getState().user
-      if (!user) {
-        throw new Error('User not authenticated')
+      const authState = useAuthStore.getState()
+      
+      if (!authState.isSupabaseConfigured) {
+        throw new Error('Supabase is not configured. Please set up your environment variables to use this feature.')
+      }
+      
+      if (!authState.user) {
+        throw new Error('You must be signed in to create projects. Please sign in or sign up first.')
       }
 
       const { data, error } = await supabase
         .from('scraping_projects')
         .insert({
-          user_id: user.id,
+          user_id: authState.user.id,
           name,
           description,
         })
@@ -64,15 +69,22 @@ export const useScrapingStore = create<ScrapingState>((set, get) => ({
   fetchProjects: async () => {
     set({ loading: true, error: null })
     try {
-      const user = useAuthStore.getState().user
-      if (!user) {
-        throw new Error('User not authenticated')
+      const authState = useAuthStore.getState()
+      
+      if (!authState.isSupabaseConfigured) {
+        set({ projects: [], loading: false, error: 'Supabase is not configured' })
+        return
+      }
+      
+      if (!authState.user) {
+        set({ projects: [], loading: false, error: 'You must be signed in to view projects' })
+        return
       }
 
       const { data, error } = await supabase
         .from('scraping_projects')
         .select('*')
-        .eq('user_id', user.id)
+        .eq('user_id', authState.user.id)
         .order('created_at', { ascending: false })
 
       if (error) throw error
@@ -87,16 +99,21 @@ export const useScrapingStore = create<ScrapingState>((set, get) => ({
   createJob: async (projectId: string, url: string, aiPrompt?: string) => {
     set({ loading: true, error: null })
     try {
-      const user = useAuthStore.getState().user
-      if (!user) {
-        throw new Error('User not authenticated')
+      const authState = useAuthStore.getState()
+      
+      if (!authState.isSupabaseConfigured) {
+        throw new Error('Supabase is not configured. Please set up your environment variables to use this feature.')
+      }
+      
+      if (!authState.user) {
+        throw new Error('You must be signed in to create scraping jobs. Please sign in or sign up first.')
       }
 
       const { data, error } = await supabase
         .from('scraping_jobs')
         .insert({
           project_id: projectId,
-          user_id: user.id,
+          user_id: authState.user.id,
           url,
           ai_analysis_prompt: aiPrompt,
           status: 'pending',
@@ -231,15 +248,22 @@ export const useScrapingStore = create<ScrapingState>((set, get) => ({
   fetchJobs: async (projectId?: string) => {
     set({ loading: true, error: null })
     try {
-      const user = useAuthStore.getState().user
-      if (!user) {
-        throw new Error('User not authenticated')
+      const authState = useAuthStore.getState()
+      
+      if (!authState.isSupabaseConfigured) {
+        set({ jobs: [], loading: false, error: 'Supabase is not configured' })
+        return
+      }
+      
+      if (!authState.user) {
+        set({ jobs: [], loading: false, error: 'You must be signed in to view jobs' })
+        return
       }
 
       let query = supabase
         .from('scraping_jobs')
         .select('*')
-        .eq('user_id', user.id)
+        .eq('user_id', authState.user.id)
         .order('created_at', { ascending: false })
 
       if (projectId) {
@@ -260,6 +284,13 @@ export const useScrapingStore = create<ScrapingState>((set, get) => ({
   fetchResults: async (jobId?: string) => {
     set({ loading: true, error: null })
     try {
+      const authState = useAuthStore.getState()
+      
+      if (!authState.isSupabaseConfigured) {
+        set({ results: [], loading: false, error: 'Supabase is not configured' })
+        return
+      }
+
       let query = supabase
         .from('scraping_results')
         .select('*')
@@ -282,6 +313,12 @@ export const useScrapingStore = create<ScrapingState>((set, get) => ({
 
   updateJobStatus: async (jobId: string, status: string, errorMessage?: string) => {
     try {
+      const authState = useAuthStore.getState()
+      
+      if (!authState.isSupabaseConfigured || !authState.user) {
+        throw new Error('Authentication required to update job status')
+      }
+
       const updateData: any = { 
         status,
         error_message: errorMessage 
@@ -319,6 +356,12 @@ export const useScrapingStore = create<ScrapingState>((set, get) => ({
 
   saveScrapingResult: async (jobId: string, rawContent: any, extractedData: any, aiAnalysis: any, metadata: any) => {
     try {
+      const authState = useAuthStore.getState()
+      
+      if (!authState.isSupabaseConfigured || !authState.user) {
+        throw new Error('Authentication required to save scraping results')
+      }
+
       const { data, error } = await supabase
         .from('scraping_results')
         .insert({
