@@ -15,7 +15,14 @@ interface QuickStartFormData {
 export const QuickStart: React.FC = () => {
   const [isValidating, setIsValidating] = useState(false)
   const { createJob, projects } = useScrapingStore()
-  const { register, handleSubmit, formState: { errors }, reset, setValue } = useForm<QuickStartFormData>({
+  const { 
+    register, 
+    handleSubmit, 
+    formState: { errors }, 
+    reset, 
+    setValue,
+    watch 
+  } = useForm<QuickStartFormData>({
     defaultValues: {
       url: '',
       aiPrompt: ''
@@ -26,29 +33,23 @@ export const QuickStart: React.FC = () => {
   const defaultProject = projects[0] || { id: '1', name: 'Demo Project' }
 
   const onSubmit = async (data: QuickStartFormData) => {
+    console.log('Form submitted with data:', data)
+    
     try {
       setIsValidating(true)
       
-      // Basic URL validation
-      const urlPattern = /^(https?:\/\/)?([\da-z\.-]+)\.([a-z\.]{2,6})([\/\w \.-]*)*\/?$/
-      if (!data.url || !data.url.trim()) {
-        throw new Error('Please enter a URL')
-      }
-      
-      if (!urlPattern.test(data.url.trim())) {
-        throw new Error('Please enter a valid URL')
-      }
-
       // Add protocol if missing
       let url = data.url.trim()
       if (!url.startsWith('http://') && !url.startsWith('https://')) {
         url = 'https://' + url
       }
       
+      console.log('Creating job with URL:', url)
       await createJob(defaultProject.id, url, data.aiPrompt)
       toast.success('Scraping job created successfully!')
       reset()
     } catch (error) {
+      console.error('Job creation error:', error)
       toast.error(error instanceof Error ? error.message : 'Failed to create scraping job')
     } finally {
       setIsValidating(false)
