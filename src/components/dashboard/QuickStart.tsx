@@ -1,8 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { Card, CardContent, CardHeader } from '../ui/Card'
-import { Button } from '../ui/Button'
-import { Input } from '../ui/Input'
 import { Globe, Zap, Brain, Clock, AlertCircle } from 'lucide-react'
 import { useScrapingStore } from '../../stores/scrapingStore'
 import { useAuthStore } from '../../stores/authStore'
@@ -20,15 +18,15 @@ export const QuickStart: React.FC = () => {
   const { 
     register, 
     handleSubmit, 
-    formState: { errors, isValid }, 
+    formState: { errors }, 
     reset, 
     setValue,
     watch
   } = useForm<QuickStartFormData>({
-    mode: 'onChange' // Enable real-time validation
+    mode: 'onChange'
   })
 
-  // Watch the URL field to enable real-time validation
+  // Watch the URL field for real-time validation
   const watchedUrl = watch('url')
 
   useEffect(() => {
@@ -37,7 +35,7 @@ export const QuickStart: React.FC = () => {
     }
   }, [fetchProjects, user])
 
-  // Use the first project or create a default one
+  // Use the first project or wait for it to be created
   const defaultProject = projects[0]
 
   // Check if API keys are configured
@@ -142,27 +140,38 @@ export const QuickStart: React.FC = () => {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-            <Input
-              label="Website URL"
-              placeholder="https://example.com"
-              icon={<Globe className="h-5 w-5 text-gray-400" />}
-              {...register('url', { 
-                required: 'URL is required',
-                validate: (value) => {
-                  if (!value || !value.trim()) {
-                    return 'URL is required'
-                  }
-                  // More permissive URL validation
-                  const trimmedValue = value.trim()
-                  const urlPattern = /^(https?:\/\/)?([\da-z\.-]+)\.([a-z\.]{2,6})([\/\w \.-]*)*\/?$/i
-                  if (!urlPattern.test(trimmedValue)) {
-                    return 'Please enter a valid URL (e.g., example.com or https://example.com)'
-                  }
-                  return true
-                }
-              })}
-              error={errors.url?.message}
-            />
+            <div className="space-y-1">
+              <label className="block text-sm font-medium text-gray-700">
+                Website URL
+              </label>
+              <div className="relative">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <Globe className="h-5 w-5 text-gray-400" />
+                </div>
+                <input
+                  {...register('url', { 
+                    required: 'URL is required',
+                    validate: (value) => {
+                      if (!value || !value.trim()) {
+                        return 'URL is required'
+                      }
+                      // More permissive URL validation
+                      const trimmedValue = value.trim()
+                      const urlPattern = /^(https?:\/\/)?([\da-z\.-]+)\.([a-z\.]{2,6})([\/\w \.-]*)*\/?$/i
+                      if (!urlPattern.test(trimmedValue)) {
+                        return 'Please enter a valid URL (e.g., example.com or https://example.com)'
+                      }
+                      return true
+                    }
+                  })}
+                  className="block w-full rounded-lg border border-gray-300 pl-10 px-3 py-2 placeholder-gray-400 shadow-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500 transition-colors"
+                  placeholder="https://example.com"
+                />
+              </div>
+              {errors.url && (
+                <p className="text-sm text-error-600">{errors.url.message}</p>
+              )}
+            </div>
             
             <div className="space-y-2">
               <label className="block text-sm font-medium text-gray-700">
@@ -203,7 +212,7 @@ export const QuickStart: React.FC = () => {
             <div className="space-y-2">
               {!defaultProject && (
                 <p className="text-sm text-warning-600 text-center">
-                  Waiting for default project to be created...
+                  Creating default project...
                 </p>
               )}
               

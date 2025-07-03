@@ -1,8 +1,6 @@
-import React, { useState, useEffect } from 'react'
+import React, { useEffect } from 'react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { Toaster } from 'react-hot-toast'
-import { Header } from './components/layout/Header'
-import { Sidebar } from './components/layout/Sidebar'
 import { Dashboard } from './components/dashboard/Dashboard'
 import { useAuthStore } from './stores/authStore'
 import { useScrapingStore } from './stores/scrapingStore'
@@ -10,8 +8,6 @@ import { useScrapingStore } from './stores/scrapingStore'
 const queryClient = new QueryClient()
 
 function App() {
-  const [activeTab, setActiveTab] = useState('dashboard')
-  const [isCreatingDefaultProject, setIsCreatingDefaultProject] = useState(false)
   const { initialize, initialized, user } = useAuthStore()
   const { createProject, projects } = useScrapingStore()
 
@@ -20,35 +16,12 @@ function App() {
   }, [initialize])
 
   useEffect(() => {
-    // Create a default project if none exists and user is authenticated
-    if (initialized && user && projects.length === 0 && !isCreatingDefaultProject) {
-      setIsCreatingDefaultProject(true)
-      createProject('Default Project', 'Your default scraping project')
+    // Create a default project if none exists and user is available
+    if (initialized && user && projects.length === 0) {
+      createProject('Default Scraping Project', 'Your main scraping workspace')
         .catch(console.error)
-        .finally(() => {
-          setIsCreatingDefaultProject(false)
-        })
     }
-  }, [initialized, user, projects.length, createProject, isCreatingDefaultProject])
-
-  const renderContent = () => {
-    switch (activeTab) {
-      case 'dashboard':
-        return <Dashboard />
-      case 'projects':
-        return <div className="p-8 text-center text-gray-500">Projects view coming soon...</div>
-      case 'scheduled':
-        return <div className="p-8 text-center text-gray-500">Scheduled jobs view coming soon...</div>
-      case 'analytics':
-        return <div className="p-8 text-center text-gray-500">Analytics view coming soon...</div>
-      case 'team':
-        return <div className="p-8 text-center text-gray-500">Team view coming soon...</div>
-      case 'settings':
-        return <div className="p-8 text-center text-gray-500">Settings view coming soon...</div>
-      default:
-        return <Dashboard />
-    }
-  }
+  }, [initialized, user, projects.length, createProject])
 
   if (!initialized) {
     return (
@@ -61,31 +34,32 @@ function App() {
     )
   }
 
-  // Show project creation loading state
-  if (initialized && user && isCreatingDefaultProject && projects.length === 0) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Creating your default project...</p>
-          <p className="text-sm text-gray-500 mt-2">This will only take a moment</p>
-        </div>
-      </div>
-    )
-  }
-
   return (
     <QueryClientProvider client={queryClient}>
       <div className="min-h-screen bg-gray-50">
-        <Header />
-        <div className="flex h-[calc(100vh-64px)]">
-          <Sidebar activeTab={activeTab} onTabChange={setActiveTab} />
-          <main className="flex-1 overflow-auto">
-            <div className="p-8">
-              {renderContent()}
+        {/* Simple header with just the logo */}
+        <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex justify-center items-center h-16">
+              <div className="flex items-center space-x-3">
+                <div className="flex items-center justify-center w-10 h-10 bg-gradient-to-r from-primary-600 to-secondary-600 rounded-lg">
+                  <svg className="h-6 w-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9v-9m0-9v9" />
+                  </svg>
+                </div>
+                <div>
+                  <h1 className="text-xl font-bold text-gray-900">AI Web Scraper</h1>
+                  <p className="text-xs text-gray-500">Intelligent Content Extraction</p>
+                </div>
+              </div>
             </div>
-          </main>
-        </div>
+          </div>
+        </header>
+
+        {/* Main content area */}
+        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <Dashboard />
+        </main>
       </div>
       <Toaster 
         position="top-right"

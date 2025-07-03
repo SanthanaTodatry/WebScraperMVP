@@ -14,6 +14,28 @@ interface AuthState {
   clearError: () => void
 }
 
+// Fixed anonymous user ID for consistent database operations
+const ANONYMOUS_USER_ID = '00000000-0000-0000-0000-000000000000'
+
+// Create anonymous user object
+const createAnonymousUser = (): User => ({
+  id: ANONYMOUS_USER_ID,
+  email: 'anonymous@scraper.local',
+  aud: 'authenticated',
+  role: 'authenticated',
+  email_confirmed_at: new Date().toISOString(),
+  phone: '',
+  confirmed_at: new Date().toISOString(),
+  last_sign_in_at: new Date().toISOString(),
+  app_metadata: {},
+  user_metadata: {
+    full_name: 'Anonymous User'
+  },
+  identities: [],
+  created_at: new Date().toISOString(),
+  updated_at: new Date().toISOString()
+})
+
 export const useAuthStore = create<AuthState>((set, get) => ({
   user: null,
   loading: false,
@@ -90,7 +112,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     try {
       const { error } = await supabase.auth.signOut()
       if (error) throw error
-      set({ user: null })
+      // Set back to anonymous user instead of null
+      set({ user: createAnonymousUser() })
     } catch (error) {
       console.error('Sign out error:', error)
       const errorMessage = error instanceof Error ? error.message : 'Sign out failed'
@@ -107,8 +130,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       
       // Check if Supabase is configured
       if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_ANON_KEY) {
-        console.error('Supabase environment variables not found')
-        set({ error: 'Application not configured. Please set up Supabase credentials.', initialized: true })
+        console.warn('Supabase environment variables not found, using anonymous user')
+        set({ user: createAnonymousUser(), error: null, initialized: true })
         return
       }
       
@@ -117,31 +140,32 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       
       if (sessionError) {
         console.error('Session error:', sessionError)
-        // Don't treat session errors as fatal - user might just not be logged in
-        set({ user: null, error: null, initialized: true })
+        // Use anonymous user on session errors
+        set({ user: createAnonymousUser(), error: null, initialized: true })
         return
       }
       
-      // If we have a session, get the user
+      // If we have a session, use the authenticated user
       if (session?.user) {
         console.log('Found existing session for user:', session.user.email)
         set({ user: session.user })
       } else {
-        console.log('No existing session found')
-        set({ user: null })
+        console.log('No existing session found, using anonymous user')
+        set({ user: createAnonymousUser() })
       }
 
       // Listen for auth changes
       supabase.auth.onAuthStateChange((event, session) => {
         console.log('Auth state changed:', event, session?.user?.email)
-        set({ user: session?.user ?? null, error: null })
+        // If user signs out or session ends, fall back to anonymous user
+        set({ user: session?.user ?? createAnonymousUser(), error: null })
       })
       
       set({ initialized: true, error: null })
     } catch (error) {
       console.error('Auth initialization error:', error)
-      // Don't set this as a fatal error - allow the app to continue
-      set({ user: null, error: null, initialized: true })
+      // Always fall back to anonymous user to ensure app functionality
+      set({ user: createAnonymousUser(), error: null, initialized: true })
     }
   },
 }))
