@@ -15,7 +15,12 @@ interface QuickStartFormData {
 export const QuickStart: React.FC = () => {
   const [isValidating, setIsValidating] = useState(false)
   const { createJob, projects } = useScrapingStore()
-  const { register, handleSubmit, formState: { errors }, reset } = useForm<QuickStartFormData>()
+  const { register, handleSubmit, formState: { errors }, reset, setValue } = useForm<QuickStartFormData>({
+    defaultValues: {
+      url: '',
+      aiPrompt: ''
+    }
+  })
 
   // Use the first project or create a default one
   const defaultProject = projects[0] || { id: '1', name: 'Demo Project' }
@@ -26,12 +31,16 @@ export const QuickStart: React.FC = () => {
       
       // Basic URL validation
       const urlPattern = /^(https?:\/\/)?([\da-z\.-]+)\.([a-z\.]{2,6})([\/\w \.-]*)*\/?$/
-      if (!urlPattern.test(data.url)) {
+      if (!data.url || !data.url.trim()) {
+        throw new Error('Please enter a URL')
+      }
+      
+      if (!urlPattern.test(data.url.trim())) {
         throw new Error('Please enter a valid URL')
       }
 
       // Add protocol if missing
-      let url = data.url
+      let url = data.url.trim()
       if (!url.startsWith('http://') && !url.startsWith('https://')) {
         url = 'https://' + url
       }
@@ -44,6 +53,10 @@ export const QuickStart: React.FC = () => {
     } finally {
       setIsValidating(false)
     }
+  }
+
+  const handlePromptClick = (prompt: string) => {
+    setValue('aiPrompt', prompt)
   }
 
   const aiPrompts = [
@@ -84,7 +97,19 @@ export const QuickStart: React.FC = () => {
               label="Website URL"
               placeholder="https://example.com"
               icon={<Globe className="h-5 w-5 text-gray-400" />}
-              {...register('url', { required: 'URL is required' })}
+              {...register('url', { 
+                required: 'URL is required',
+                validate: (value) => {
+                  if (!value || !value.trim()) {
+                    return 'URL is required'
+                  }
+                  const urlPattern = /^(https?:\/\/)?([\da-z\.-]+)\.([a-z\.]{2,6})([\/\w \.-]*)*\/?$/
+                  if (!urlPattern.test(value.trim())) {
+                    return 'Please enter a valid URL'
+                  }
+                  return true
+                }
+              })}
               error={errors.url?.message}
             />
             
@@ -94,7 +119,7 @@ export const QuickStart: React.FC = () => {
               </label>
               <textarea
                 {...register('aiPrompt', { required: 'AI prompt is required' })}
-                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent resize-none"
                 rows={3}
                 placeholder="Tell the AI what information to extract..."
               />
@@ -130,10 +155,7 @@ export const QuickStart: React.FC = () => {
               <div 
                 key={index}
                 className="p-3 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100 transition-colors"
-                onClick={() => {
-                  const form = document.querySelector('textarea[name="aiPrompt"]') as HTMLTextAreaElement
-                  if (form) form.value = prompt
-                }}
+                onClick={() => handlePromptClick(prompt)}
               >
                 <p className="text-sm text-gray-700">{prompt}</p>
               </div>
