@@ -12,7 +12,7 @@ const queryClient = new QueryClient()
 function App() {
   const [activeTab, setActiveTab] = useState('dashboard')
   const { initialize, initialized, user } = useAuthStore()
-  const { createProject, projects } = useScrapingStore()
+  const { createProject, projects, loading: scrapingLoading } = useScrapingStore()
 
   useEffect(() => {
     initialize()
@@ -51,6 +51,19 @@ function App() {
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600 mx-auto mb-4"></div>
           <p className="text-gray-600">Initializing application...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Show project creation loading state
+  if (initialized && user && scrapingLoading && projects.length === 0) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Creating your default project...</p>
+          <p className="text-sm text-gray-500 mt-2">This will only take a moment</p>
         </div>
       </div>
     )
