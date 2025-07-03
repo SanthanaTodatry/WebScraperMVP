@@ -11,7 +11,7 @@ const queryClient = new QueryClient()
 
 function App() {
   const [activeTab, setActiveTab] = useState('dashboard')
-  const { initialize, initialized } = useAuthStore()
+  const { initialize, initialized, user } = useAuthStore()
   const { createProject, projects } = useScrapingStore()
 
   useEffect(() => {
@@ -19,12 +19,12 @@ function App() {
   }, [initialize])
 
   useEffect(() => {
-    // Create a default project if none exists
-    if (initialized && projects.length === 0) {
+    // Create a default project if none exists and user is authenticated
+    if (initialized && user && projects.length === 0) {
       createProject('Default Project', 'Your default scraping project')
         .catch(console.error)
     }
-  }, [initialized, projects.length, createProject])
+  }, [initialized, user, projects.length, createProject])
 
   const renderContent = () => {
     switch (activeTab) {
