@@ -3,17 +3,21 @@ import { Card, CardContent, CardHeader } from '../ui/Card'
 import { StatusBadge } from '../ui/StatusBadge'
 import { Button } from '../ui/Button'
 import { useScrapingStore } from '../../stores/scrapingStore'
+import { useAuthStore } from '../../stores/authStore'
 import { ScrapingResultDisplay } from '../results/ScrapingResultDisplay'
 import { formatDistanceToNow } from 'date-fns'
 import { ExternalLink, Clock, Globe, Eye, ArrowLeft } from 'lucide-react'
 
 export const RecentActivity: React.FC = () => {
   const { jobs, fetchJobs } = useScrapingStore()
+  const { user } = useAuthStore()
   const [selectedJobId, setSelectedJobId] = useState<string | null>(null)
 
   useEffect(() => {
-    fetchJobs()
-  }, [fetchJobs])
+    if (user) {
+      fetchJobs()
+    }
+  }, [fetchJobs, user])
 
   const recentJobs = jobs.slice(0, 5)
 

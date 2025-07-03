@@ -5,6 +5,7 @@ import { Button } from '../ui/Button'
 import { Input } from '../ui/Input'
 import { Globe, Zap, Brain, Clock } from 'lucide-react'
 import { useScrapingStore } from '../../stores/scrapingStore'
+import { useAuthStore } from '../../stores/authStore'
 import toast from 'react-hot-toast'
 
 interface QuickStartFormData {
@@ -15,6 +16,7 @@ interface QuickStartFormData {
 export const QuickStart: React.FC = () => {
   const [isValidating, setIsValidating] = useState(false)
   const { createJob, projects, fetchProjects } = useScrapingStore()
+  const { user } = useAuthStore()
   const { 
     register, 
     handleSubmit, 
@@ -24,8 +26,10 @@ export const QuickStart: React.FC = () => {
   } = useForm<QuickStartFormData>()
 
   useEffect(() => {
-    fetchProjects()
-  }, [fetchProjects])
+    if (user) {
+      fetchProjects()
+    }
+  }, [fetchProjects, user])
 
   // Use the first project or create a default one
   const defaultProject = projects[0]
