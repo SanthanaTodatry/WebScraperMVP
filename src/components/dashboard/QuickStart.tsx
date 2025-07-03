@@ -20,14 +20,8 @@ export const QuickStart: React.FC = () => {
     handleSubmit, 
     formState: { errors }, 
     reset, 
-    setValue,
-    watch 
-  } = useForm<QuickStartFormData>({
-    defaultValues: {
-      url: '',
-      aiPrompt: ''
-    }
-  })
+    setValue 
+  } = useForm<QuickStartFormData>()
 
   // Use the first project or create a default one
   const defaultProject = projects[0] || { id: '1', name: 'Demo Project' }
@@ -104,9 +98,11 @@ export const QuickStart: React.FC = () => {
                   if (!value || !value.trim()) {
                     return 'URL is required'
                   }
-                  const urlPattern = /^(https?:\/\/)?([\da-z\.-]+)\.([a-z\.]{2,6})([\/\w \.-]*)*\/?$/
-                  if (!urlPattern.test(value.trim())) {
-                    return 'Please enter a valid URL'
+                  // More permissive URL validation
+                  const trimmedValue = value.trim()
+                  const urlPattern = /^(https?:\/\/)?([\da-z\.-]+)\.([a-z\.]{2,6})([\/\w \.-]*)*\/?$/i
+                  if (!urlPattern.test(trimmedValue)) {
+                    return 'Please enter a valid URL (e.g., example.com or https://example.com)'
                   }
                   return true
                 }
