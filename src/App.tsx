@@ -11,8 +11,9 @@ const queryClient = new QueryClient()
 
 function App() {
   const [activeTab, setActiveTab] = useState('dashboard')
+  const [isCreatingDefaultProject, setIsCreatingDefaultProject] = useState(false)
   const { initialize, initialized, user } = useAuthStore()
-  const { createProject, projects, loading: scrapingLoading } = useScrapingStore()
+  const { createProject, projects } = useScrapingStore()
 
   useEffect(() => {
     initialize()
@@ -20,11 +21,15 @@ function App() {
 
   useEffect(() => {
     // Create a default project if none exists and user is authenticated
-    if (initialized && user && projects.length === 0) {
+    if (initialized && user && projects.length === 0 && !isCreatingDefaultProject) {
+      setIsCreatingDefaultProject(true)
       createProject('Default Project', 'Your default scraping project')
         .catch(console.error)
+        .finally(() => {
+          setIsCreatingDefaultProject(false)
+        })
     }
-  }, [initialized, user, projects.length, createProject])
+  }, [initialized, user, projects.length, createProject, isCreatingDefaultProject])
 
   const renderContent = () => {
     switch (activeTab) {
@@ -57,7 +62,7 @@ function App() {
   }
 
   // Show project creation loading state
-  if (initialized && user && scrapingLoading && projects.length === 0) {
+  if (initialized && user && isCreatingDefaultProject && projects.length === 0) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">

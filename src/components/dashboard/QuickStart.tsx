@@ -181,12 +181,6 @@ export const QuickStart: React.FC = () => {
               Start Web Scraping
             </Button>
             
-            {!defaultProject && (
-              <p className="text-sm text-warning-600 text-center">
-                Creating default project...
-              </p>
-            )}
-            
             {!firecrawlConfigured && (
               <p className="text-sm text-error-600 text-center">
                 Firecrawl API key required to start scraping
