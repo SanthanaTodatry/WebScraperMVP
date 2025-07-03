@@ -112,26 +112,36 @@ export const useAuthStore = create<AuthState>((set, get) => ({
         return
       }
       
-      const { data: { user }, error } = await supabase.auth.getUser()
+      // Get current session first
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession()
       
-      if (error) {
-        console.error('Auth initialization error:', error)
-        set({ error: error.message })
+      if (sessionError) {
+        console.error('Session error:', sessionError)
+        // Don't treat session errors as fatal - user might just not be logged in
+        set({ user: null, error: null, initialized: true })
+        return
+      }
+      
+      // If we have a session, get the user
+      if (session?.user) {
+        console.log('Found existing session for user:', session.user.email)
+        set({ user: session.user })
       } else {
-        console.log('Current user:', user)
-        set({ user })
+        console.log('No existing session found')
+        set({ user: null })
       }
 
       // Listen for auth changes
       supabase.auth.onAuthStateChange((event, session) => {
-        console.log('Auth state changed:', event, session?.user)
+        console.log('Auth state changed:', event, session?.user?.email)
         set({ user: session?.user ?? null, error: null })
       })
       
-      set({ initialized: true })
+      set({ initialized: true, error: null })
     } catch (error) {
       console.error('Auth initialization error:', error)
-      set({ error: 'Failed to initialize authentication', initialized: true })
+      // Don't set this as a fatal error - allow the app to continue
+      set({ user: null, error: null, initialized: true })
     }
   },
 }))
